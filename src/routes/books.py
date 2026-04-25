@@ -1,6 +1,10 @@
 from fastapi import APIRouter, HTTPException, status
 
-from src.exceptions import BookNotFoundError, HorrorGenreNotAllowedError
+from src.exceptions import (
+    BookNotFoundError,
+    HorrorGenreNotAllowedError,
+    LastBookInGenreError,
+)
 from src.models.book import BookGenre
 from src.routes.dependencies import DatabaseDependency
 from src.schemas.book import (
@@ -71,3 +75,16 @@ def update_books(
         return [BookResponse.model_validate(b) for b in books]
     except BookNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+
+
+@books_router.delete(
+    path="/{book_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def delete_book(session: DatabaseDependency, book_id: int) -> None:
+    try:
+        book_service.delete_book(book_id, session)
+    except BookNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+    except LastBookInGenreError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))

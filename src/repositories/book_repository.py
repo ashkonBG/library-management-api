@@ -1,3 +1,4 @@
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from src.models.book import Book
@@ -26,3 +27,11 @@ def update_book(session: Session, book: Book, patch: dict) -> Book:
     session.flush()
 
     return book
+
+
+def count_books_in_genre(session: Session, genre: str) -> int:
+    return session.query(func.count(Book.id)).filter(Book.genre == genre).scalar() or 0
+
+
+def delete_book(session: Session, book: Book) -> None:
+    session.delete(book)

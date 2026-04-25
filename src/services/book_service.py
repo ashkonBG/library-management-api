@@ -1,6 +1,10 @@
 from sqlalchemy.orm import Session
 
-from src.exceptions import BookNotFoundError, HorrorGenreNotAllowedError
+from src.exceptions import (
+    BookNotFoundError,
+    HorrorGenreNotAllowedError,
+    LastBookInGenreError,
+)
 from src.models.book import Book, BookGenre
 from src.repositories import book_repository
 from src.schemas.book import BookCreate, BulkUpdateItem
@@ -38,3 +42,17 @@ def bulk_update_books(updates: list[BulkUpdateItem], session: Session) -> list[B
         to_update.append(book)
 
     return to_update
+
+
+def delete_book(book_id: int, session: Session) -> None:
+    book = book_repository.get_book_by_id(session, book_id)
+
+    if not book:
+        raise BookNotFoundError(book_id)
+
+    genre_count = book_repository.count_books_in_genre(session, book.genre)
+
+    if genre_count <= 1:
+        raise LastBookInGenreError(book.genre)
+
+    book_repository.delete_book(session, book)

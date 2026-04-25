@@ -148,3 +148,58 @@ def test_update_book_flushes_to_db(
 
     assert refreshed is not None
     assert refreshed.title == "Flushed Title"
+
+
+def test_count_books_in_genre_correct_count(
+    db_session: Session, sample_books: list[Book]
+) -> None:
+    expected = sum(1 for b in sample_books if b.genre == "Fiction")
+
+    assert book_repository.count_books_in_genre(db_session, "Fiction") == expected
+
+
+def test_count_books_in_genre_returns_zero_for_unknown_genre(
+    db_session: Session,
+) -> None:
+    assert book_repository.count_books_in_genre(db_session, "Nonexistent") == 0
+
+
+def test_count_books_in_genre_returns_zero_on_empty_db(db_session: Session) -> None:
+    assert book_repository.count_books_in_genre(db_session, "Fiction") == 0
+
+
+def test_count_books_in_genre_counts_adult_genre(
+    db_session: Session, sample_books: list[Book]
+) -> None:
+    assert book_repository.count_books_in_genre(db_session, "18+") == 1
+
+
+def test_delete_book_removes_it_from_db(
+    db_session: Session, sample_books: list[Book]
+) -> None:
+    book = sample_books[0]
+    book_id = book.id
+    book_repository.delete_book(db_session, book)
+    db_session.flush()
+    assert book_repository.get_book_by_id(db_session, book_id) is None
+
+
+def test_delete_book_does_not_affect_other_books(
+    db_session: Session, sample_books: list[Book]
+) -> None:
+    book_to_delete = sample_books[0]
+    remaining_ids = {b.id for b in sample_books[1:]}
+    book_repository.delete_book(db_session, book_to_delete)
+    db_session.flush()
+    for bid in remaining_ids:
+        assert book_repository.get_book_by_id(db_session, bid) is not None
+
+
+def test_delete_book_reduces_total_count(
+    db_session: Session, sample_books: list[Book]
+) -> None:
+    before = len(book_repository.get_all_books(db_session))
+    book_repository.delete_book(db_session, sample_books[0])
+    db_session.flush()
+    after = len(book_repository.get_all_books(db_session))
+    assert after == before - 1

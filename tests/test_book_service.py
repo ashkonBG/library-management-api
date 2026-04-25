@@ -3,7 +3,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.exceptions import BookNotFoundError, HorrorGenreNotAllowedError
+from src.exceptions import (
+    BookNotFoundError,
+    HorrorGenreNotAllowedError,
+    LastBookInGenreError,
+)
 from src.models.book import Book, BookGenre
 from src.schemas.book import BookCreate, BulkUpdateItem
 from src.services import book_service
@@ -251,3 +255,86 @@ def test_bulk_update_books_only_set_fields_are_patched(
 
     _, _, patch_dict = mock_repo.update_book.call_args[0]
     assert list(patch_dict.keys()) == ["title"]
+
+
+@patch("src.services.book_service.book_repository")
+def test_delete_book_success_calls_repo_delete(
+    mock_repo: MagicMock, make_saved_book: Callable[..., Book]
+) -> None:
+    session = MagicMock()
+    book = make_saved_book(id=1, genre="Fiction")
+    mock_repo.get_book_by_id.return_value = book
+    mock_repo.count_books_in_genre.return_value = 3
+
+    book_service.delete_book(1, session)
+
+    mock_repo.delete_book.assert_called_once_with(session, book)
+
+
+@patch("src.services.book_service.book_repository")
+def test_delete_book_not_found_raises_error(mock_repo: MagicMock) -> None:
+    session = MagicMock()
+    mock_repo.get_book_by_id.return_value = None
+
+    with pytest.raises(BookNotFoundError) as exc_info:
+        book_service.delete_book(404, session)
+
+    assert exc_info.value.book_id == 404
+
+
+@patch("src.services.book_service.book_repository")
+def test_delete_book_not_found_skips_count_and_delete(mock_repo: MagicMock) -> None:
+    session = MagicMock()
+    mock_repo.get_book_by_id.return_value = None
+
+    try:
+        book_service.delete_book(1, session)
+    except BookNotFoundError:
+        pass
+
+    mock_repo.count_books_in_genre.assert_not_called()
+    mock_repo.delete_book.assert_not_called()
+
+
+@patch("src.services.book_service.book_repository")
+def test_delete_book_last_in_genre_raises_error(
+    mock_repo: MagicMock, make_saved_book: Callable[..., Book]
+) -> None:
+    session = MagicMock()
+    book = make_saved_book(id=1, genre="Mystery")
+    mock_repo.get_book_by_id.return_value = book
+    mock_repo.count_books_in_genre.return_value = 1
+
+    with pytest.raises(LastBookInGenreError) as exc_info:
+        book_service.delete_book(1, session)
+
+    assert exc_info.value.genre == "Mystery"
+
+
+@patch("src.services.book_service.book_repository")
+def test_delete_book_last_in_genre_does_not_call_delete(
+    mock_repo: MagicMock, make_saved_book: Callable[..., Book]
+) -> None:
+    session = MagicMock()
+    mock_repo.get_book_by_id.return_value = make_saved_book(id=1, genre="Mystery")
+    mock_repo.count_books_in_genre.return_value = 1
+
+    try:
+        book_service.delete_book(1, session)
+    except LastBookInGenreError:
+        pass
+
+    mock_repo.delete_book.assert_not_called()
+
+
+@patch("src.services.book_service.book_repository")
+def test_delete_book_with_two_books_in_genre_succeeds(
+    mock_repo: MagicMock, make_saved_book: Callable[..., Book]
+) -> None:
+    session = MagicMock()
+    mock_repo.get_book_by_id.return_value = make_saved_book(id=1, genre="Fiction")
+    mock_repo.count_books_in_genre.return_value = 2
+
+    book_service.delete_book(1, session)
+
+    mock_repo.delete_book.assert_called_once()
