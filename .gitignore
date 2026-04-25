@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment files
+.env
+
+# Database
+*.db
+*.sqlite3
+data/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# pre-commit
+.pre-commit-hooks/
+
+# mypy
+.mypy_cache/
+
+# ruff
+.ruff_cache/
+
+# tests
+.coverage
