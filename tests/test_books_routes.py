@@ -14,6 +14,7 @@ def test_add_book_returns_201(client: TestClient) -> None:
         "publicationYear": 1965,
         "genre": "Fiction",
     }
+
     assert client.post("/books/", json=payload).status_code == 201
 
 
@@ -24,7 +25,9 @@ def test_add_book_response_contains_id(client: TestClient) -> None:
         "publicationYear": 1965,
         "genre": "Fiction",
     }
+
     data = client.post("/books/", json=payload).json()
+
     assert "id" in data
     assert isinstance(data["id"], int)
 
@@ -36,7 +39,9 @@ def test_add_book_response_matches_input(client: TestClient) -> None:
         "publicationYear": 1965,
         "genre": "Fiction",
     }
+
     data = client.post("/books/", json=payload).json()
+
     assert data["title"] == "Dune"
     assert data["author"] == "Frank Herbert"
     assert data["publicationYear"] == 1965
@@ -50,6 +55,7 @@ def test_add_book_accepts_snake_case_input(client: TestClient) -> None:
         "publication_year": 2021,
         "genre": "Fiction",
     }
+
     assert client.post("/books/", json=payload).status_code == 201
 
 
@@ -60,6 +66,7 @@ def test_add_book_horror_returns_400(client: TestClient) -> None:
         "publicationYear": 1977,
         "genre": "Horror",
     }
+
     assert client.post("/books/", json=payload).status_code == 400
 
 
@@ -70,12 +77,15 @@ def test_add_book_horror_detail_mentions_horror(client: TestClient) -> None:
         "publicationYear": 1986,
         "genre": "Horror",
     }
+
     detail = client.post("/books/", json=payload).json()["detail"]
+
     assert "Horror" in detail
 
 
 def test_add_book_missing_required_field_returns_422(client: TestClient) -> None:
     payload = {"title": "No Author", "publicationYear": 2020, "genre": "Fiction"}
+
     assert client.post("/books/", json=payload).status_code == 422
 
 
@@ -86,6 +96,7 @@ def test_add_book_wrong_type_for_year_returns_422(client: TestClient) -> None:
         "publicationYear": "not-a-number",
         "genre": "Fiction",
     }
+
     assert client.post("/books/", json=payload).status_code == 422
 
 
@@ -96,6 +107,7 @@ def test_add_book_adult_genre_is_allowed(client: TestClient) -> None:
         "publicationYear": 2020,
         "genre": "18+",
     }
+
     assert client.post("/books/", json=payload).status_code == 201
 
 
@@ -110,6 +122,7 @@ def test_add_book_multiple_books_get_distinct_ids(client: TestClient) -> None:
 
     id1 = client.post("/books/", json=payload(1)).json()["id"]
     id2 = client.post("/books/", json=payload(2)).json()["id"]
+
     assert id1 != id2
 
 
@@ -131,6 +144,7 @@ def test_list_books_groups_by_genre(
 ) -> None:
     data = client.get("/books/").json()
     genre_names = {g["genre"] for g in data["genres"]}
+
     assert "Fiction" in genre_names
     assert "Mystery" in genre_names
 
@@ -139,6 +153,7 @@ def test_list_books_count_matches_number_of_books(
     client: TestClient, sample_books: list[Book]
 ) -> None:
     data = client.get("/books/").json()
+
     for group in data["genres"]:
         assert group["count"] == len(group["books"])
 
@@ -149,6 +164,7 @@ def test_list_books_fiction_count_is_correct(
     data = client.get("/books/").json()
     fiction_group = next(g for g in data["genres"] if g["genre"] == "Fiction")
     expected = sum(1 for b in sample_books if b.genre == "Fiction")
+
     assert fiction_group["count"] == expected
 
 
@@ -157,6 +173,7 @@ def test_list_books_adult_title_is_masked_as_stars(
 ) -> None:
     data = client.get("/books/").json()
     adult_group = next(g for g in data["genres"] if g["genre"] == "18+")
+
     for book in adult_group["books"]:
         assert book["title"] == "***"
 
@@ -166,6 +183,7 @@ def test_list_books_adult_other_fields_are_not_masked(
 ) -> None:
     data = client.get("/books/").json()
     adult_group = next(g for g in data["genres"] if g["genre"] == "18+")
+
     for book in adult_group["books"]:
         assert book["author"] != "***"
         assert book["genre"] == "18+"
@@ -175,6 +193,7 @@ def test_list_books_non_adult_titles_are_not_masked(
     client: TestClient, sample_books: list[Book]
 ) -> None:
     data = client.get("/books/").json()
+
     for group in data["genres"]:
         if group["genre"] != "18+":
             for book in group["books"]:
@@ -186,5 +205,91 @@ def test_list_books_response_uses_camel_case(
 ) -> None:
     data = client.get("/books/").json()
     book = data["genres"][0]["books"][0]
+
     assert "publicationYear" in book
     assert "publication_year" not in book
+
+
+# ---------------------------------------------------------------------------
+# PUT /books
+# ---------------------------------------------------------------------------
+
+
+def test_update_books_returns_200(client: TestClient, sample_books: list[Book]) -> None:
+    payload = [{"id": sample_books[0].id, "title": "Updated"}]
+
+    assert client.put("/books/", json=payload).status_code == 200
+
+
+def test_update_books_title_is_changed(
+    client: TestClient, sample_books: list[Book]
+) -> None:
+    book = sample_books[0]
+    payload = [{"id": book.id, "title": "New Title"}]
+
+    data = client.put("/books/", json=payload).json()
+
+    assert data[0]["title"] == "New Title"
+
+
+def test_update_books_id_stays_the_same(
+    client: TestClient, sample_books: list[Book]
+) -> None:
+    book = sample_books[0]
+    payload = [{"id": book.id, "title": "Changed"}]
+
+    assert client.put("/books/", json=payload).json()[0]["id"] == book.id
+
+
+def test_update_books_partial_update_preserves_other_fields(
+    client: TestClient, sample_books: list[Book]
+) -> None:
+    book = sample_books[0]
+    original_author = book.author
+    payload = [{"id": book.id, "title": "Only Title Changed"}]
+
+    data = client.put("/books/", json=payload).json()
+
+    assert data[0]["author"] == original_author
+
+
+def test_update_books_not_found_returns_404(client: TestClient) -> None:
+    payload = [{"id": 9999, "title": "Ghost"}]
+
+    assert client.put("/books/", json=payload).status_code == 404
+
+
+def test_update_books_not_found_detail_contains_id(client: TestClient) -> None:
+    payload = [{"id": 9999, "title": "Ghost"}]
+
+    detail = client.put("/books/", json=payload).json()["detail"]
+
+    assert "9999" in detail
+
+
+def test_update_books_multiple_books_at_once(
+    client: TestClient, sample_books: list[Book]
+) -> None:
+    b1, b2 = sample_books[0], sample_books[1]
+    payload = [
+        {"id": b1.id, "title": "First Updated"},
+        {"id": b2.id, "title": "Second Updated"},
+    ]
+
+    data = client.put("/books/", json=payload).json()
+
+    assert len(data) == 2
+    titles = {b["title"] for b in data}
+    assert "First Updated" in titles
+    assert "Second Updated" in titles
+
+
+def test_update_books_genre_can_be_changed(
+    client: TestClient, sample_books: list[Book]
+) -> None:
+    book = sample_books[0]
+    payload = [{"id": book.id, "genre": "Fantasy"}]
+
+    data = client.put("/books/", json=payload).json()
+
+    assert data[0]["genre"] == "Fantasy"
