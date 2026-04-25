@@ -39,3 +39,33 @@ def test_create_book_multiple_books_get_unique_ids(
     b2 = book_repository.create_book(db_session, make_unsaved_book(title="Book Two"))
 
     assert b1.id != b2.id
+
+
+def test_get_all_books_empty_database(db_session: Session) -> None:
+    assert book_repository.get_all_books(db_session) == []
+
+
+def test_get_all_books_returns_every_book(
+    db_session: Session, sample_books: list[Book]
+) -> None:
+    result = book_repository.get_all_books(db_session)
+
+    assert len(result) == len(sample_books)
+
+
+def test_get_all_books_ordered_by_genre_then_id(
+    db_session: Session, sample_books: list[Book]
+) -> None:
+    result = book_repository.get_all_books(db_session)
+    genres = [b.genre for b in result]
+
+    assert genres == sorted(genres)
+
+
+def test_get_all_books_includes_adult_genre(
+    db_session: Session, sample_books: list[Book]
+) -> None:
+    result = book_repository.get_all_books(db_session)
+    genres = {b.genre for b in result}
+
+    assert "18+" in genres

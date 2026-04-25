@@ -80,3 +80,48 @@ def make_saved_book() -> Callable[..., Book]:
         )
 
     return _factory
+
+
+@pytest.fixture
+def sample_books(db_session: Session) -> list[Book]:
+    books = [
+        Book(
+            title="The Great Gatsby",
+            author="F. Scott Fitzgerald",
+            publication_year=1925,
+            genre=BookGenre.FICTION,
+        ),
+        Book(
+            title="1984",
+            author="George Orwell",
+            publication_year=1949,
+            genre=BookGenre.FICTION,
+        ),
+        Book(
+            title="The Da Vinci Code",
+            author="Dan Brown",
+            publication_year=2003,
+            genre=BookGenre.MYSTERY,
+        ),
+        Book(
+            title="The Shining",
+            author="Stephen King",
+            publication_year=1977,
+            genre=BookGenre.HORROR,
+        ),
+        Book(
+            title="Fifty Shades of Grey",
+            author="E.L. James",
+            publication_year=2011,
+            genre=BookGenre.ADULT,
+        ),
+        Book(
+            title="A Brief History of Time",
+            author="Stephen Hawking",
+            publication_year=1988,
+            genre=BookGenre.NONFICTION,
+        ),
+    ]
+    db_session.add_all(books)
+    db_session.flush()
+    return books

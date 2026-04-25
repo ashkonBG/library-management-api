@@ -9,3 +9,7 @@ def create_book(session: Session, book: Book) -> Book:
     session.refresh(book)
 
     return book
+
+
+def get_all_books(session: Session) -> list[Book]:
+    return session.query(Book).order_by(Book.genre, Book.id).all()
