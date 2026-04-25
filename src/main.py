@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 
 from src.config.app_settings import app_settings
+from src.routes.books import books_router
 
 app = FastAPI(
     title=app_settings.name,
@@ -9,6 +10,8 @@ app = FastAPI(
     description="An API for managing a library of books.",
     generate_unique_id_function=lambda route: route.name,
 )
+
+app.include_router(books_router)
 
 
 @app.get("/", tags=["Health"])
