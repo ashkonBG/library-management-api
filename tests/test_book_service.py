@@ -338,3 +338,52 @@ def test_delete_book_with_two_books_in_genre_succeeds(
     book_service.delete_book(1, session)
 
     mock_repo.delete_book.assert_called_once()
+
+
+@patch("src.services.book_service.book_repository")
+def test_search_books_delegates_entirely_to_repo(
+    mock_repo: MagicMock, make_saved_book: Callable[..., Book]
+) -> None:
+    session = MagicMock()
+    expected = [make_saved_book(id=1)]
+    mock_repo.search_books.return_value = expected
+
+    result = book_service.search_books(session, q="test")
+
+    assert result is expected
+
+
+@patch("src.services.book_service.book_repository")
+def test_search_books_passes_all_keyword_args(mock_repo: MagicMock) -> None:
+    session = MagicMock()
+    mock_repo.search_books.return_value = []
+
+    book_service.search_books(
+        session, q="x", title="y", author="z", publication_year=2000
+    )
+
+    mock_repo.search_books.assert_called_once_with(
+        session, q="x", title="y", author="z", publication_year=2000
+    )
+
+
+@patch("src.services.book_service.book_repository")
+def test_search_books_none_defaults_passed_to_repo(mock_repo: MagicMock) -> None:
+    session = MagicMock()
+    mock_repo.search_books.return_value = []
+
+    book_service.search_books(session)
+
+    mock_repo.search_books.assert_called_once_with(
+        session, q=None, title=None, author=None, publication_year=None
+    )
+
+
+@patch("src.services.book_service.book_repository")
+def test_search_books_returns_empty_list_when_repo_returns_empty(
+    mock_repo: MagicMock,
+) -> None:
+    session = MagicMock()
+    mock_repo.search_books.return_value = []
+
+    assert book_service.search_books(session) == []

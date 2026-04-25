@@ -1,7 +1,9 @@
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from src.models.book import Book
+from src.models.book import Book, BookGenre
+
+ADULT_GENRE = BookGenre.ADULT
 
 
 def create_book(session: Session, book: Book) -> Book:
@@ -35,3 +37,24 @@ def count_books_in_genre(session: Session, genre: str) -> int:
 
 def delete_book(session: Session, book: Book) -> None:
     session.delete(book)
+
+
+def search_books(
+    session: Session,
+    q: str | None = None,
+    title: str | None = None,
+    author: str | None = None,
+    publication_year: int | None = None,
+) -> list[Book]:
+    query = session.query(Book).filter(Book.genre != ADULT_GENRE)
+
+    if q:
+        query = query.filter(Book.title.ilike(f"%{q}%") | Book.author.ilike(f"%{q}%"))
+    if title:
+        query = query.filter(Book.title.ilike(f"%{title}%"))
+    if author:
+        query = query.filter(Book.author.ilike(f"%{author}%"))
+    if publication_year is not None:
+        query = query.filter(Book.publication_year == publication_year)
+
+    return query.order_by(Book.id).all()

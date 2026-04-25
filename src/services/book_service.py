@@ -56,3 +56,15 @@ def delete_book(book_id: int, session: Session) -> None:
         raise LastBookInGenreError(book.genre)
 
     book_repository.delete_book(session, book)
+
+
+def search_books(
+    session: Session,
+    q: str | None = None,
+    title: str | None = None,
+    author: str | None = None,
+    publication_year: int | None = None,
+) -> list[Book]:
+    return book_repository.search_books(
+        session, q=q, title=title, author=author, publication_year=publication_year
+    )

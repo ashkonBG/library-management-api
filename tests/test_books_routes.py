@@ -345,3 +345,108 @@ def test_delete_last_remaining_book_of_non_fiction_genre_blocked(
 ) -> None:
     nonfiction = next(b for b in sample_books if b.genre == "Nonfiction")
     assert client.delete(f"/books/{nonfiction.id}").status_code == 400
+
+
+# ---------------------------------------------------------------------------
+# GET /books/search
+# ---------------------------------------------------------------------------
+
+
+def test_search_books_returns_200(client: TestClient, sample_books: list[Book]) -> None:
+    assert client.get("/books/search").status_code == 200
+
+
+def test_search_books_no_params_returns_all_non_adult(
+    client: TestClient, sample_books: list[Book]
+) -> None:
+    data = client.get("/books/search").json()
+    genres = {b["genre"] for b in data}
+
+    assert "18+" not in genres
+
+
+def test_search_books_excludes_adult_genre_even_with_matching_author(
+    client: TestClient, sample_books: list[Book]
+) -> None:
+    data = client.get("/books/search", params={"author": "E.L. James"}).json()
+
+    assert data == []
+
+
+def test_search_books_by_q_matches_title(
+    client: TestClient, sample_books: list[Book]
+) -> None:
+    data = client.get("/books/search", params={"q": "Gatsby"}).json()
+
+    assert len(data) == 1
+    assert data[0]["title"] == "The Great Gatsby"
+
+
+def test_search_books_by_q_matches_author(
+    client: TestClient, sample_books: list[Book]
+) -> None:
+    data = client.get("/books/search", params={"q": "Orwell"}).json()
+
+    assert len(data) == 1
+    assert data[0]["author"] == "George Orwell"
+
+
+def test_search_books_by_title_param(
+    client: TestClient, sample_books: list[Book]
+) -> None:
+    data = client.get("/books/search", params={"title": "Da Vinci"}).json()
+
+    assert data[0]["title"] == "The Da Vinci Code"
+
+
+def test_search_books_by_author_param(
+    client: TestClient, sample_books: list[Book]
+) -> None:
+    data = client.get("/books/search", params={"author": "Orwell"}).json()
+
+    assert data[0]["author"] == "George Orwell"
+
+
+def test_search_books_by_publication_year(
+    client: TestClient, sample_books: list[Book]
+) -> None:
+    data = client.get("/books/search", params={"publication_year": 1949}).json()
+
+    assert len(data) == 1
+    assert data[0]["title"] == "1984"
+
+
+def test_search_books_no_match_returns_empty_list(
+    client: TestClient, sample_books: list[Book]
+) -> None:
+    data = client.get("/books/search", params={"q": "xyznonexistent"}).json()
+
+    assert data == []
+
+
+def test_search_books_response_uses_camel_case(
+    client: TestClient, sample_books: list[Book]
+) -> None:
+    data = client.get("/books/search", params={"q": "Gatsby"}).json()
+
+    assert "publicationYear" in data[0]
+    assert "publication_year" not in data[0]
+
+
+def test_search_books_response_schema_has_all_required_fields(
+    client: TestClient, sample_books: list[Book]
+) -> None:
+    data = client.get("/books/search", params={"q": "Gatsby"}).json()
+    book = data[0]
+
+    for field in ("id", "title", "author", "publicationYear", "genre"):
+        assert field in book
+
+
+def test_search_books_q_is_case_insensitive(
+    client: TestClient, sample_books: list[Book]
+) -> None:
+    lower = client.get("/books/search", params={"q": "gatsby"}).json()
+    upper = client.get("/books/search", params={"q": "GATSBY"}).json()
+
+    assert len(lower) == len(upper) == 1

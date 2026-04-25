@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, status
 
 from src.exceptions import (
     BookNotFoundError,
@@ -88,3 +88,19 @@ def delete_book(session: DatabaseDependency, book_id: int) -> None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
     except LastBookInGenreError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+
+
+@books_router.get(path="/search", response_model=list[BookResponse])
+def search_books(
+    session: DatabaseDependency,
+    q: str | None = Query(None, description="Search term for title or author"),
+    title: str | None = Query(None, description="Filter by title (partial match)"),
+    author: str | None = Query(None, description="Filter by author (partial match)"),
+    publication_year: int | None = Query(
+        None, description="Filter by exact publication year"
+    ),
+) -> list[BookResponse]:
+    books = book_service.search_books(
+        session, q=q, title=title, author=author, publication_year=publication_year
+    )
+    return [BookResponse.model_validate(b) for b in books]

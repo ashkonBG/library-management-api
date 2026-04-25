@@ -203,3 +203,101 @@ def test_delete_book_reduces_total_count(
     db_session.flush()
     after = len(book_repository.get_all_books(db_session))
     assert after == before - 1
+
+
+def test_search_books_always_excludes_adult_genre(
+    db_session: Session, sample_books: list[Book]
+) -> None:
+    results = book_repository.search_books(db_session)
+    assert all(b.genre != "18+" for b in results)
+
+
+def test_search_books_adult_author_query_returns_empty(
+    db_session: Session, sample_books: list[Book]
+) -> None:
+    results = book_repository.search_books(db_session, author="E.L. James")
+    assert results == []
+
+
+def test_search_books_no_filters_returns_all_non_adult(
+    db_session: Session, sample_books: list[Book]
+) -> None:
+    expected = sum(1 for b in sample_books if b.genre != "18+")
+    assert len(book_repository.search_books(db_session)) == expected
+
+
+def test_search_books_q_matches_title(
+    db_session: Session, sample_books: list[Book]
+) -> None:
+    results = book_repository.search_books(db_session, q="Gatsby")
+    assert len(results) == 1
+    assert results[0].title == "The Great Gatsby"
+
+
+def test_search_books_q_matches_author(
+    db_session: Session, sample_books: list[Book]
+) -> None:
+    results = book_repository.search_books(db_session, q="Orwell")
+    assert len(results) == 1
+    assert results[0].author == "George Orwell"
+
+
+def test_search_books_q_is_case_insensitive(
+    db_session: Session, sample_books: list[Book]
+) -> None:
+    lower = book_repository.search_books(db_session, q="gatsby")
+    upper = book_repository.search_books(db_session, q="GATSBY")
+    assert len(lower) == len(upper) == 1
+
+
+def test_search_books_q_partial_match(
+    db_session: Session, sample_books: list[Book]
+) -> None:
+    results = book_repository.search_books(db_session, q="Vinci")
+    assert any("Da Vinci" in b.title for b in results)
+
+
+def test_search_books_by_title_filter(
+    db_session: Session, sample_books: list[Book]
+) -> None:
+    results = book_repository.search_books(db_session, title="Da Vinci")
+    assert len(results) == 1
+    assert results[0].title == "The Da Vinci Code"
+
+
+def test_search_books_by_author_filter(
+    db_session: Session, sample_books: list[Book]
+) -> None:
+    results = book_repository.search_books(db_session, author="Stephen")
+    titles = {b.title for b in results}
+    assert "The Shining" in titles
+    assert "A Brief History of Time" in titles
+
+
+def test_search_books_by_publication_year(
+    db_session: Session, sample_books: list[Book]
+) -> None:
+    results = book_repository.search_books(db_session, publication_year=1949)
+    assert len(results) == 1
+    assert results[0].title == "1984"
+
+
+def test_search_books_combined_title_and_author(
+    db_session: Session, sample_books: list[Book]
+) -> None:
+    results = book_repository.search_books(db_session, title="1984", author="Orwell")
+    assert len(results) == 1
+
+
+def test_search_books_no_match_returns_empty(
+    db_session: Session, sample_books: list[Book]
+) -> None:
+    assert book_repository.search_books(db_session, q="xyznonexistent") == []
+
+
+def test_search_books_results_ordered_by_id(
+    db_session: Session, sample_books: list[Book]
+) -> None:
+    results = book_repository.search_books(db_session)
+    ids = [b.id for b in results]
+    assert ids == sorted(ids)
