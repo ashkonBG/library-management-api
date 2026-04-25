@@ -60,3 +60,23 @@ def make_unsaved_book() -> Callable[..., Book]:
         )
 
     return _factory
+
+
+@pytest.fixture
+def make_saved_book() -> Callable[..., Book]:
+    def _factory(
+        id: int = 1,
+        title: str = "Test Book",
+        author: str = "Test Author",
+        publication_year: int = 2020,
+        genre: BookGenre = BookGenre.FICTION,
+    ) -> Book:
+        return Book(
+            id=id,
+            title=title,
+            author=author,
+            publication_year=publication_year,
+            genre=genre,
+        )
+
+    return _factory
