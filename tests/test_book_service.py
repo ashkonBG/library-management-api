@@ -86,3 +86,70 @@ def test_create_book_non_horror_genres_are_allowed(
         )
 
     assert mock_repo.create_book.call_count == 5
+
+
+@patch("src.services.book_service.book_repository")
+def test_get_books_grouped_returns_dict_keyed_by_genre(
+    mock_repo: MagicMock, make_saved_book: Callable[..., Book]
+) -> None:
+    session = MagicMock()
+    mock_repo.get_all_books.return_value = [
+        make_saved_book(id=1, genre="Fiction"),
+        make_saved_book(id=2, genre="Fiction"),
+        make_saved_book(id=3, genre="Mystery"),
+    ]
+
+    result = book_service.get_books_grouped(session)
+
+    assert set(result.keys()) == {"Fiction", "Mystery"}
+    assert len(result["Fiction"]) == 2
+    assert len(result["Mystery"]) == 1
+
+
+@patch("src.services.book_service.book_repository")
+def test_get_books_grouped_empty_db_returns_empty_dict(mock_repo: MagicMock) -> None:
+    session = MagicMock()
+    mock_repo.get_all_books.return_value = []
+
+    assert book_service.get_books_grouped(session) == {}
+
+
+@patch("src.services.book_service.book_repository")
+def test_get_books_grouped_includes_adult_genre_in_map(
+    mock_repo: MagicMock, make_saved_book: Callable[..., Book]
+) -> None:
+    session = MagicMock()
+    mock_repo.get_all_books.return_value = [
+        make_saved_book(id=1, genre="Fiction"),
+        make_saved_book(id=2, genre="18+"),
+    ]
+
+    result = book_service.get_books_grouped(session)
+
+    assert "18+" in result
+    assert "Fiction" in result
+
+
+@patch("src.services.book_service.book_repository")
+def test_get_books_grouped_books_belong_to_correct_genre(
+    mock_repo: MagicMock, make_saved_book: Callable[..., Book]
+) -> None:
+    session = MagicMock()
+    fiction_book = make_saved_book(id=1, genre="Fiction")
+    mystery_book = make_saved_book(id=2, genre="Mystery")
+    mock_repo.get_all_books.return_value = [fiction_book, mystery_book]
+
+    result = book_service.get_books_grouped(session)
+
+    assert fiction_book in result["Fiction"]
+    assert mystery_book in result["Mystery"]
+
+
+@patch("src.services.book_service.book_repository")
+def test_get_books_grouped_calls_get_all_books(mock_repo: MagicMock) -> None:
+    session = MagicMock()
+    mock_repo.get_all_books.return_value = []
+
+    book_service.get_books_grouped(session)
+
+    mock_repo.get_all_books.assert_called_once_with(session)
