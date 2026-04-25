@@ -16,3 +16,25 @@ dependencies = [
 dev = [
     "pre-commit>=4.6.0",
 ]
+
+[tool.isort]
+force_grid_wrap = 0
+multi_line_output = 3
+include_trailing_comma = true
+use_parentheses = true
+line_length = 88
+
+[tool.mypy]
+disallow_untyped_defs = true
+show_error_codes = true
+no_implicit_optional = true
+plugins = ["pydantic.mypy", "sqlalchemy.ext.mypy.plugin"]
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
+
+[[tool.mypy.overrides]]
+module = ["requests"]
+ignore_missing_imports = true
