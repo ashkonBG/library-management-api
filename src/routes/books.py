@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, status
 
-from src.exceptions import HorrorGenreNotAllowedError
+from src.exceptions import BookNotFoundError, HorrorGenreNotAllowedError
 from src.models.book import BookGenre
 from src.routes.dependencies import DatabaseDependency
 from src.schemas.book import (
@@ -8,6 +8,7 @@ from src.schemas.book import (
     BookInGenre,
     BookResponse,
     BooksGroupedResponse,
+    BulkUpdateItem,
     GenreGroup,
 )
 from src.services import book_service
@@ -30,7 +31,10 @@ def add_book(session: DatabaseDependency, book: BookCreate) -> BookResponse:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
 
 
-@books_router.get(path="/", response_model=BooksGroupedResponse)
+@books_router.get(
+    path="/",
+    response_model=BooksGroupedResponse,
+)
 def list_books(session: DatabaseDependency) -> BooksGroupedResponse:
     genre_map = book_service.get_books_grouped(session)
     groups = [
@@ -52,3 +56,18 @@ def list_books(session: DatabaseDependency) -> BooksGroupedResponse:
     ]
 
     return BooksGroupedResponse(genres=groups)
+
+
+@books_router.put(
+    path="/",
+    response_model=list[BookResponse],
+)
+def update_books(
+    session: DatabaseDependency, updates: list[BulkUpdateItem]
+) -> list[BookResponse]:
+    try:
+        books = book_service.bulk_update_books(updates, session)
+
+        return [BookResponse.model_validate(b) for b in books]
+    except BookNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))

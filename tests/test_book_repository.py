@@ -69,3 +69,82 @@ def test_get_all_books_includes_adult_genre(
     genres = {b.genre for b in result}
 
     assert "18+" in genres
+
+
+def test_get_book_by_id_returns_correct_book(
+    db_session: Session, sample_books: list[Book]
+) -> None:
+    target = sample_books[0]
+
+    result = book_repository.get_book_by_id(db_session, target.id)
+
+    assert result is not None
+    assert result.id == target.id
+    assert result.title == target.title
+
+
+def test_get_book_by_id_returns_none_when_missing(db_session: Session) -> None:
+    assert book_repository.get_book_by_id(db_session, 9999) is None
+
+
+def test_get_book_by_id_returns_none_on_empty_db(db_session: Session) -> None:
+    assert book_repository.get_book_by_id(db_session, 1) is None
+
+
+def test_update_book_changes_single_field(
+    db_session: Session, sample_books: list[Book]
+) -> None:
+    book = sample_books[0]
+
+    book_repository.update_book(db_session, book, {"title": "Updated Title"})
+
+    assert book.title == "Updated Title"
+
+
+def test_update_book_changes_multiple_fields(
+    db_session: Session, sample_books: list[Book]
+) -> None:
+    book = sample_books[0]
+
+    book_repository.update_book(
+        db_session, book, {"title": "New Title", "publication_year": 2000}
+    )
+
+    assert book.title == "New Title"
+    assert book.publication_year == 2000
+
+
+def test_update_book_does_not_affect_other_fields(
+    db_session: Session, sample_books: list[Book]
+) -> None:
+    book = sample_books[0]
+    original_author = book.author
+
+    book_repository.update_book(db_session, book, {"title": "Changed"})
+
+    assert book.author == original_author
+
+
+def test_update_book_returns_modified_book(
+    db_session: Session, sample_books: list[Book]
+) -> None:
+    book = sample_books[0]
+
+    result = book_repository.update_book(db_session, book, {"title": "Returned"})
+
+    assert result.title == "Returned"
+
+
+def test_update_book_flushes_to_db(
+    db_session: Session, sample_books: list[Book]
+) -> None:
+    book = sample_books[0]
+    book_id = book.id
+    book_repository.update_book(db_session, book, {"title": "Flushed Title"})
+
+    # expire the cached instance so SQLAlchemy re-fetches from the DB
+    db_session.expire(book)
+    refreshed = book_repository.get_book_by_id(db_session, book_id)
+
+    assert refreshed is not None
+    assert refreshed.title == "Flushed Title"

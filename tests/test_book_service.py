@@ -3,9 +3,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.exceptions import HorrorGenreNotAllowedError
+from src.exceptions import BookNotFoundError, HorrorGenreNotAllowedError
 from src.models.book import Book, BookGenre
-from src.schemas.book import BookCreate
+from src.schemas.book import BookCreate, BulkUpdateItem
 from src.services import book_service
 
 
@@ -153,3 +153,101 @@ def test_get_books_grouped_calls_get_all_books(mock_repo: MagicMock) -> None:
     book_service.get_books_grouped(session)
 
     mock_repo.get_all_books.assert_called_once_with(session)
+
+
+@patch("src.services.book_service.book_repository")
+def test_bulk_update_books_success_returns_updated_books(
+    mock_repo: MagicMock, make_saved_book: Callable[..., Book]
+) -> None:
+    session = MagicMock()
+    existing = make_saved_book(id=1, title="Old Title")
+    mock_repo.get_book_by_id.return_value = existing
+
+    result = book_service.bulk_update_books(
+        [BulkUpdateItem(id=1, title="New Title")], session
+    )
+
+    assert result == [existing]
+
+
+@patch("src.services.book_service.book_repository")
+def test_bulk_update_books_calls_update_with_correct_patch(
+    mock_repo: MagicMock, make_saved_book: Callable[..., Book]
+) -> None:
+    session = MagicMock()
+    existing = make_saved_book(id=1)
+    mock_repo.get_book_by_id.return_value = existing
+
+    book_service.bulk_update_books([BulkUpdateItem(id=1, title="Changed")], session)
+
+    mock_repo.update_book.assert_called_once_with(
+        session, existing, {"title": "Changed"}
+    )
+
+
+@patch("src.services.book_service.book_repository")
+def test_bulk_update_books_excludes_id_from_patch(
+    mock_repo: MagicMock, make_saved_book: Callable[..., Book]
+) -> None:
+    session = MagicMock()
+    mock_repo.get_book_by_id.return_value = make_saved_book(id=1)
+
+    book_service.bulk_update_books([BulkUpdateItem(id=1, title="T")], session)
+
+    _, _, patch_dict = mock_repo.update_book.call_args[0]
+    assert "id" not in patch_dict
+    assert "title" in patch_dict
+
+
+@patch("src.services.book_service.book_repository")
+def test_bulk_update_books_not_found_raises_error(mock_repo: MagicMock) -> None:
+    session = MagicMock()
+    mock_repo.get_book_by_id.return_value = None
+
+    with pytest.raises(BookNotFoundError) as exc_info:
+        book_service.bulk_update_books([BulkUpdateItem(id=999, title="X")], session)
+
+    assert exc_info.value.book_id == 999
+
+
+@patch("src.services.book_service.book_repository")
+def test_bulk_update_books_not_found_does_not_call_update(mock_repo: MagicMock) -> None:
+    session = MagicMock()
+    mock_repo.get_book_by_id.return_value = None
+
+    try:
+        book_service.bulk_update_books([BulkUpdateItem(id=999)], session)
+    except BookNotFoundError:
+        pass
+
+    mock_repo.update_book.assert_not_called()
+
+
+@patch("src.services.book_service.book_repository")
+def test_bulk_update_books_multiple_items(
+    mock_repo: MagicMock, make_saved_book: Callable[..., Book]
+) -> None:
+    session = MagicMock()
+    b1, b2 = make_saved_book(id=1), make_saved_book(id=2)
+    mock_repo.get_book_by_id.side_effect = [b1, b2]
+
+    result = book_service.bulk_update_books(
+        [BulkUpdateItem(id=1, title="T1"), BulkUpdateItem(id=2, title="T2")],
+        session,
+    )
+
+    assert result == [b1, b2]
+    assert mock_repo.update_book.call_count == 2
+
+
+@patch("src.services.book_service.book_repository")
+def test_bulk_update_books_only_set_fields_are_patched(
+    mock_repo: MagicMock, make_saved_book: Callable[..., Book]
+) -> None:
+    session = MagicMock()
+    mock_repo.get_book_by_id.return_value = make_saved_book(id=1)
+
+    book_service.bulk_update_books([BulkUpdateItem(id=1, title="Only Title")], session)
+
+    _, _, patch_dict = mock_repo.update_book.call_args[0]
+    assert list(patch_dict.keys()) == ["title"]

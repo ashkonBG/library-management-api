@@ -33,3 +33,11 @@ class GenreGroup(BaseModel):
 
 class BooksGroupedResponse(BaseModel):
     genres: list[GenreGroup]
+
+
+class BulkUpdateItem(BaseModel):
+    id: int
+    title: str | None = None
+    author: str | None = None
+    publication_year: int | None = None
+    genre: BookGenre | None = None
