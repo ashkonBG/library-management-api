@@ -15,3 +15,21 @@ class BookCreate(BookBase):
 
 class BookResponse(BookBase):
     id: int
+
+
+class BookInGenre(BaseModel):
+    id: int
+    title: str
+    author: str
+    publication_year: int
+    genre: BookGenre
+
+
+class GenreGroup(BaseModel):
+    genre: str
+    count: int
+    books: list[BookInGenre]
+
+
+class BooksGroupedResponse(BaseModel):
+    genres: list[GenreGroup]
