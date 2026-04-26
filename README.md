@@ -84,6 +84,22 @@ variables or a `.env` file:
 
 `GET /` returns the application status, name, and version - useful for liveness probes in containerized environments.
 
+### Pre-commit Hooks
+
+Code quality is enforced automatically on every commit via **pre-commit**. The following hooks run before each commit is
+accepted:
+
+| Hook                  | Purpose                                       |
+|-----------------------|-----------------------------------------------|
+| `sort-pyproject`      | Keeps `pyproject.toml` sections sorted        |
+| `end-of-file-fixer`   | Ensures files end with a newline              |
+| `trailing-whitespace` | Removes trailing whitespace                   |
+| `black`               | Opinionated Python code formatter             |
+| `isort`               | Sorts and organises import statements         |
+| `ruff`                | Fast Python linter (with auto-fix)            |
+| `mypy`                | Static type checking                          |
+| `uv-lock`             | Keeps `uv.lock` in sync with `pyproject.toml` |
+
 ### Docker Support
 
 A `Dockerfile` and `docker-compose.yml` are included for containerized deployment.
@@ -142,6 +158,14 @@ library-management-api/
 uv sync
 ```
 
+### Install pre-commit hooks
+
+```bash
+uv run pre-commit install
+```
+
+> After this, code quality checks (formatting, linting, type checking) run automatically on every `git commit`.
+
 ### Run database migrations
 
 ```bash
@@ -195,5 +219,3 @@ uv run pytest --cov=src --cov-report=term-missing
 ```
 
 **Current test results:** 122 passed · 94% coverage
-
-
