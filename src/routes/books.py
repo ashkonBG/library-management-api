@@ -1,6 +1,5 @@
 from fastapi import APIRouter, HTTPException, Query, status
 
-
 from src.exceptions import BookNotFoundError, LastBookInGenreError
 from src.models.book import BookGenre
 from src.routes.dependencies import DatabaseDependency
