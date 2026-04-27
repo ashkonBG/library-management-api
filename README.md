@@ -26,11 +26,12 @@ A RESTful API for managing a library of books, built with **FastAPI**, **SQLAlch
 | Requirement                        | Status | Details                                                                       |
 |------------------------------------|--------|-------------------------------------------------------------------------------|
 | **Add a New Book**                 | ✅      | `POST /books/` - validates and persists a new book                            |
-| Horror genre blocked               | ✅      | Returns `400 Bad Request` with a clear message if genre is `"Horror"`         |
+| Horror genre blocked on create     | ✅      | Rejected by Pydantic schema validation; returns `422 Unprocessable Entity`    |
 | **Retrieve All Books**             | ✅      | `GET /books/` - returns all books grouped by genre                            |
 | Grouped by genre with count        | ✅      | Response includes `genre`, `count`, and a `books` list per group              |
 | Mask titles for `"18+"` genre      | ✅      | Titles of `18+` books are replaced with `"***"` in the list response          |
 | **Update a Book by ID**            | ✅      | `PUT /books/` - supports bulk (multiple books) partial updates in one request |
+| Horror genre blocked on update     | ✅      | Rejected by Pydantic schema validation; returns `422 Unprocessable Entity`    |
 | **Delete a Book by ID**            | ✅      | `DELETE /books/{book_id}` - removes a book by its ID                          |
 | Cannot delete last book in genre   | ✅      | Returns `400 Bad Request` if the book is the last remaining one in its genre  |
 | **Search Books**                   | ✅      | `GET /books/search` - search by title and/or author                           |
@@ -38,12 +39,12 @@ A RESTful API for managing a library of books, built with **FastAPI**, **SQLAlch
 
 ### Technical Requirements
 
-| Requirement           | Status | Details                                                                              |
-|-----------------------|--------|--------------------------------------------------------------------------------------|
-| **FastAPI**           | ✅      | All endpoints built with FastAPI; auto-generated OpenAPI docs at `/docs`             |
-| **Pydantic**          | ✅      | All request/response models use Pydantic v2; full data validation on input           |
-| **pytest unit tests** | ✅      | 122 tests across repository, service, route, and exception layers - **94% coverage** |
-| **SQLite database**   | ✅      | SQLite via SQLAlchemy ORM; schema managed with Alembic migrations                    |
+| Requirement           | Status | Details                                                                                                         |
+|-----------------------|--------|-----------------------------------------------------------------------------------------------------------------|
+| **FastAPI**           | ✅      | All endpoints built with FastAPI; auto-generated OpenAPI docs at `/docs`                                        |
+| **Pydantic**          | ✅      | All request/response models use Pydantic v2; business rules (e.g. Horror block) enforced via `@field_validator` |
+| **pytest unit tests** | ✅      | 126 tests across repository, service, route, schema, and exception layers - **94% coverage**                    |
+| **SQLite database**   | ✅      | SQLite via SQLAlchemy ORM; schema managed with Alembic migrations                                               |
 
 ---
 
@@ -136,7 +137,7 @@ library-management-api/
 │   ├── services/             # Business logic layer
 │   ├── exceptions.py         # Custom domain exceptions
 │   └── main.py               # FastAPI app entry point
-├── tests/                    # pytest test suite (122 tests, 94% coverage)
+├── tests/                    # pytest test suite (126 tests, 94% coverage)
 ├── Dockerfile
 ├── docker-compose.yml
 ├── pyproject.toml
@@ -204,7 +205,8 @@ docker-compose up --build
 
 `Fiction`, `Nonfiction`, `Mystery`, `Fantasy`, `18+`
 
-> **Note:** `Horror` is a valid enum value but cannot be used when adding books.
+> **Note:** `Horror` is a valid enum value but is rejected by Pydantic schema validation on both create and update,
+> returning `422 Unprocessable Entity`.
 
 ---
 
@@ -218,4 +220,4 @@ uv run pytest
 uv run pytest --cov=src --cov-report=term-missing
 ```
 
-**Current test results:** 122 passed · 94% coverage
+**Current test results:** 126 passed · 94% coverage
