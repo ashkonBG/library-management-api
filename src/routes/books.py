@@ -73,6 +73,8 @@ def update_books(
         books = book_service.bulk_update_books(updates, session)
 
         return [BookResponse.model_validate(b) for b in books]
+    except HorrorGenreNotAllowedError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
     except BookNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
 
@@ -93,11 +95,15 @@ def delete_book(session: DatabaseDependency, book_id: int) -> None:
 @books_router.get(path="/search", response_model=list[BookResponse])
 def search_books(
     session: DatabaseDependency,
-    q: str | None = Query(None, description="Search term for title or author"),
-    title: str | None = Query(None, description="Filter by title (partial match)"),
-    author: str | None = Query(None, description="Filter by author (partial match)"),
+    q: str | None = Query(default=None, description="Search term for title or author"),
+    title: str | None = Query(
+        default=None, description="Filter by title (partial match)"
+    ),
+    author: str | None = Query(
+        default=None, description="Filter by author (partial match)"
+    ),
     publication_year: int | None = Query(
-        None, description="Filter by exact publication year"
+        default=None, description="Filter by exact publication year"
     ),
 ) -> list[BookResponse]:
     books = book_service.search_books(

@@ -258,6 +258,33 @@ def test_bulk_update_books_only_set_fields_are_patched(
 
 
 @patch("src.services.book_service.book_repository")
+def test_bulk_update_books_horror_genre_raises_error(mock_repo: MagicMock) -> None:
+    session = MagicMock()
+
+    with pytest.raises(HorrorGenreNotAllowedError):
+        book_service.bulk_update_books(
+            [BulkUpdateItem(id=1, genre=BookGenre.HORROR)], session
+        )
+
+
+@patch("src.services.book_service.book_repository")
+def test_bulk_update_books_horror_genre_never_reaches_repo(
+    mock_repo: MagicMock,
+) -> None:
+    session = MagicMock()
+
+    try:
+        book_service.bulk_update_books(
+            [BulkUpdateItem(id=1, genre=BookGenre.HORROR)], session
+        )
+    except HorrorGenreNotAllowedError:
+        pass
+
+    mock_repo.get_book_by_id.assert_not_called()
+    mock_repo.update_book.assert_not_called()
+
+
+@patch("src.services.book_service.book_repository")
 def test_delete_book_success_calls_repo_delete(
     mock_repo: MagicMock, make_saved_book: Callable[..., Book]
 ) -> None:

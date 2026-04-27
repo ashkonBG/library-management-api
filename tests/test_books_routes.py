@@ -295,6 +295,24 @@ def test_update_books_genre_can_be_changed(
     assert data[0]["genre"] == "Fantasy"
 
 
+def test_update_books_horror_genre_returns_400(
+    client: TestClient, sample_books: list[Book]
+) -> None:
+    payload = [{"id": sample_books[0].id, "genre": "Horror"}]
+
+    assert client.put("/books/", json=payload).status_code == 400
+
+
+def test_update_books_horror_genre_detail_message(
+    client: TestClient, sample_books: list[Book]
+) -> None:
+    payload = [{"id": sample_books[0].id, "genre": "Horror"}]
+
+    detail = client.put("/books/", json=payload).json()["detail"]
+
+    assert "Horror" in detail
+
+
 # ---------------------------------------------------------------------------
 # DELETE /books/{book_id}
 # ---------------------------------------------------------------------------
@@ -302,6 +320,7 @@ def test_update_books_genre_can_be_changed(
 
 def test_delete_book_returns_204(client: TestClient, sample_books: list[Book]) -> None:
     fiction = [b for b in sample_books if b.genre == "Fiction"]
+
     assert client.delete(f"/books/{fiction[0].id}").status_code == 204
 
 
@@ -311,6 +330,7 @@ def test_delete_book_not_found_returns_404(client: TestClient) -> None:
 
 def test_delete_book_not_found_detail_contains_id(client: TestClient) -> None:
     detail = client.delete("/books/9999").json()["detail"]
+
     assert "9999" in detail
 
 
@@ -318,6 +338,7 @@ def test_delete_book_last_in_genre_returns_400(
     client: TestClient, sample_books: list[Book]
 ) -> None:
     mystery = next(b for b in sample_books if b.genre == "Mystery")
+
     assert client.delete(f"/books/{mystery.id}").status_code == 400
 
 
@@ -325,7 +346,9 @@ def test_delete_book_last_in_genre_detail_mentions_genre(
     client: TestClient, sample_books: list[Book]
 ) -> None:
     mystery = next(b for b in sample_books if b.genre == "Mystery")
+
     detail = client.delete(f"/books/{mystery.id}").json()["detail"]
+
     assert "Mystery" in detail
 
 
@@ -336,7 +359,9 @@ def test_delete_book_reduces_genre_count(
     client.delete(f"/books/{fiction[0].id}")
     # Should still be able to delete the second fiction book only if more exist
     data = client.get("/books/").json()
+
     fiction_group = next(g for g in data["genres"] if g["genre"] == "Fiction")
+
     assert fiction_group["count"] == len(fiction) - 1
 
 
@@ -344,6 +369,7 @@ def test_delete_last_remaining_book_of_non_fiction_genre_blocked(
     client: TestClient, sample_books: list[Book]
 ) -> None:
     nonfiction = next(b for b in sample_books if b.genre == "Nonfiction")
+
     assert client.delete(f"/books/{nonfiction.id}").status_code == 400
 
 

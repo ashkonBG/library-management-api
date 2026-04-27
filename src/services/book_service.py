@@ -31,7 +31,11 @@ def get_books_grouped(session: Session) -> dict[str, list[Book]]:
 
 def bulk_update_books(updates: list[BulkUpdateItem], session: Session) -> list[Book]:
     to_update: list[Book] = []
+
     for item in updates:
+        if item.genre == HORROR_GENRE:
+            raise HorrorGenreNotAllowedError()
+
         book = book_repository.get_book_by_id(session, item.id)
 
         if not book:
