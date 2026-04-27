@@ -1,24 +1,6 @@
 import pytest
 
-from src.exceptions import (
-    BookNotFoundError,
-    HorrorGenreNotAllowedError,
-    LastBookInGenreError,
-)
-
-
-def test_horror_genre_not_allowed_error_is_exception() -> None:
-    assert isinstance(HorrorGenreNotAllowedError(), Exception)
-
-
-def test_horror_genre_not_allowed_error_message() -> None:
-    exc = HorrorGenreNotAllowedError()
-    assert str(exc) == "Books with genre 'Horror' cannot be added."
-
-
-def test_horror_genre_not_allowed_error_can_be_raised_and_caught() -> None:
-    with pytest.raises(HorrorGenreNotAllowedError):
-        raise HorrorGenreNotAllowedError()
+from src.exceptions import BookNotFoundError, LastBookInGenreError
 
 
 def test_book_not_found_error_is_exception() -> None:

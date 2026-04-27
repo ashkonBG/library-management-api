@@ -1,21 +1,12 @@
 from sqlalchemy.orm import Session
 
-from src.exceptions import (
-    BookNotFoundError,
-    HorrorGenreNotAllowedError,
-    LastBookInGenreError,
-)
-from src.models.book import Book, BookGenre
+from src.exceptions import BookNotFoundError, LastBookInGenreError
+from src.models.book import Book
 from src.repositories import book_repository
 from src.schemas.book import BookCreate, BulkUpdateItem
 
-HORROR_GENRE = BookGenre.HORROR
-
 
 def create_book(book: BookCreate, session: Session) -> Book:
-    if book.genre == HORROR_GENRE:
-        raise HorrorGenreNotAllowedError()
-
     return book_repository.create_book(session, Book(**book.model_dump()))
 
 
@@ -33,8 +24,6 @@ def bulk_update_books(updates: list[BulkUpdateItem], session: Session) -> list[B
     to_update: list[Book] = []
 
     for item in updates:
-        if item.genre == HORROR_GENRE:
-            raise HorrorGenreNotAllowedError()
 
         book = book_repository.get_book_by_id(session, item.id)
 

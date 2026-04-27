@@ -59,7 +59,7 @@ def test_add_book_accepts_snake_case_input(client: TestClient) -> None:
     assert client.post("/books/", json=payload).status_code == 201
 
 
-def test_add_book_horror_returns_400(client: TestClient) -> None:
+def test_add_book_horror_returns_422(client: TestClient) -> None:
     payload = {
         "title": "The Shining",
         "author": "Stephen King",
@@ -67,7 +67,7 @@ def test_add_book_horror_returns_400(client: TestClient) -> None:
         "genre": "Horror",
     }
 
-    assert client.post("/books/", json=payload).status_code == 400
+    assert client.post("/books/", json=payload).status_code == 422
 
 
 def test_add_book_horror_detail_mentions_horror(client: TestClient) -> None:
@@ -78,9 +78,11 @@ def test_add_book_horror_detail_mentions_horror(client: TestClient) -> None:
         "genre": "Horror",
     }
 
-    detail = client.post("/books/", json=payload).json()["detail"]
+    response = client.post("/books/", json=payload).json()
+    # Pydantic validation errors are nested under "detail" -> list of errors
+    detail_str = str(response["detail"])
 
-    assert "Horror" in detail
+    assert "Horror" in detail_str
 
 
 def test_add_book_missing_required_field_returns_422(client: TestClient) -> None:
@@ -295,12 +297,12 @@ def test_update_books_genre_can_be_changed(
     assert data[0]["genre"] == "Fantasy"
 
 
-def test_update_books_horror_genre_returns_400(
+def test_update_books_horror_genre_returns_422(
     client: TestClient, sample_books: list[Book]
 ) -> None:
     payload = [{"id": sample_books[0].id, "genre": "Horror"}]
 
-    assert client.put("/books/", json=payload).status_code == 400
+    assert client.put("/books/", json=payload).status_code == 422
 
 
 def test_update_books_horror_genre_detail_message(
@@ -308,9 +310,9 @@ def test_update_books_horror_genre_detail_message(
 ) -> None:
     payload = [{"id": sample_books[0].id, "genre": "Horror"}]
 
-    detail = client.put("/books/", json=payload).json()["detail"]
+    detail_str = str(client.put("/books/", json=payload).json()["detail"])
 
-    assert "Horror" in detail
+    assert "Horror" in detail_str
 
 
 # ---------------------------------------------------------------------------

@@ -1,3 +1,5 @@
+from pydantic import field_validator
+
 from src.models.book import BookGenre
 from src.schemas.base import BaseModel
 
@@ -10,7 +12,13 @@ class BookBase(BaseModel):
 
 
 class BookCreate(BookBase):
-    pass
+    @field_validator("genre")
+    @classmethod
+    def genre_must_not_be_horror(cls, value: BookGenre) -> BookGenre:
+        if value == BookGenre.HORROR:
+            raise ValueError("Books with the genre 'Horror' cannot be added.")
+
+        return value
 
 
 class BookResponse(BookBase):
@@ -41,3 +49,11 @@ class BulkUpdateItem(BaseModel):
     author: str | None = None
     publication_year: int | None = None
     genre: BookGenre | None = None
+
+    @field_validator("genre")
+    @classmethod
+    def genre_must_not_be_horror(cls, value: BookGenre | None) -> BookGenre | None:
+        if value == BookGenre.HORROR:
+            raise ValueError("Books with the genre 'Horror' cannot be added.")
+
+        return value

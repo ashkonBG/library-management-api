@@ -3,11 +3,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.exceptions import (
-    BookNotFoundError,
-    HorrorGenreNotAllowedError,
-    LastBookInGenreError,
-)
+from src.exceptions import BookNotFoundError, LastBookInGenreError
 from src.models.book import Book, BookGenre
 from src.schemas.book import BookCreate, BulkUpdateItem
 from src.services import book_service
@@ -33,41 +29,6 @@ def test_create_book_success_returns_db_book(
 
     assert result is expected
     mock_repo.create_book.assert_called_once()
-
-
-def test_create_book_horror_raises_error() -> None:
-    session = MagicMock()
-
-    with pytest.raises(HorrorGenreNotAllowedError):
-        book_service.create_book(
-            BookCreate(
-                title="It",
-                author="S. King",
-                publication_year=1986,
-                genre=BookGenre.HORROR,
-            ),
-            session,
-        )
-
-
-@patch("src.services.book_service.book_repository")
-def test_create_book_horror_never_reaches_repo(mock_repo: MagicMock) -> None:
-    session = MagicMock()
-
-    try:
-        book_service.create_book(
-            BookCreate(
-                title="It",
-                author="S. King",
-                publication_year=1986,
-                genre=BookGenre.HORROR,
-            ),
-            session,
-        )
-    except HorrorGenreNotAllowedError:
-        pass
-
-    mock_repo.create_book.assert_not_called()
 
 
 @patch("src.services.book_service.book_repository")
@@ -255,33 +216,6 @@ def test_bulk_update_books_only_set_fields_are_patched(
 
     _, _, patch_dict = mock_repo.update_book.call_args[0]
     assert list(patch_dict.keys()) == ["title"]
-
-
-@patch("src.services.book_service.book_repository")
-def test_bulk_update_books_horror_genre_raises_error(mock_repo: MagicMock) -> None:
-    session = MagicMock()
-
-    with pytest.raises(HorrorGenreNotAllowedError):
-        book_service.bulk_update_books(
-            [BulkUpdateItem(id=1, genre=BookGenre.HORROR)], session
-        )
-
-
-@patch("src.services.book_service.book_repository")
-def test_bulk_update_books_horror_genre_never_reaches_repo(
-    mock_repo: MagicMock,
-) -> None:
-    session = MagicMock()
-
-    try:
-        book_service.bulk_update_books(
-            [BulkUpdateItem(id=1, genre=BookGenre.HORROR)], session
-        )
-    except HorrorGenreNotAllowedError:
-        pass
-
-    mock_repo.get_book_by_id.assert_not_called()
-    mock_repo.update_book.assert_not_called()
 
 
 @patch("src.services.book_service.book_repository")

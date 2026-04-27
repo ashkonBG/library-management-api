@@ -1,10 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query, status
 
-from src.exceptions import (
-    BookNotFoundError,
-    HorrorGenreNotAllowedError,
-    LastBookInGenreError,
-)
+
+from src.exceptions import BookNotFoundError, LastBookInGenreError
 from src.models.book import BookGenre
 from src.routes.dependencies import DatabaseDependency
 from src.schemas.book import (
@@ -27,12 +24,9 @@ books_router = APIRouter(prefix="/books", tags=["Books"])
     status_code=status.HTTP_201_CREATED,
 )
 def add_book(session: DatabaseDependency, book: BookCreate) -> BookResponse:
-    try:
-        db_book = book_service.create_book(book, session)
+    db_book = book_service.create_book(book, session)
 
-        return BookResponse.model_validate(db_book)
-    except HorrorGenreNotAllowedError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+    return BookResponse.model_validate(db_book)
 
 
 @books_router.get(
@@ -73,8 +67,6 @@ def update_books(
         books = book_service.bulk_update_books(updates, session)
 
         return [BookResponse.model_validate(b) for b in books]
-    except HorrorGenreNotAllowedError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
     except BookNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
 
